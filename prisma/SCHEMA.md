@@ -75,6 +75,26 @@ erDiagram
   String status "nullable"
   DateTime created_at "nullable"
 }
+"media_content_keys" {
+  Int id PK
+  String title "nullable"
+  String filename "nullable"
+  String category "nullable"
+  String channel "nullable"
+  String media_content_key "nullable"
+  String time "nullable"
+  Int duration_ms "nullable"
+  DateTime modified_at "nullable"
+  DateTime created_at "nullable"
+  DateTime removed_at "nullable"
+}
+"config_variables" {
+  String variable_name PK
+  String value "nullable"
+  DateTime modified_at "nullable"
+  DateTime created_at "nullable"
+  DateTime removed_at "nullable"
+}
 "user_channels" |o--|| "users" : user
 "user_curriculums" }o--|| "users" : user
 "user_curriculums" }o--|| "curriculums" : curriculum
@@ -294,3 +314,35 @@ row2 { sessionId: 1000, problemId: 444, unitId: 4, sequence: 0, context: lesson,
     > 
     > 스텝문제에서는 자신의 상태만 기록한다(틀리고 맞음)
   - `created_at`: 생성일
+
+### `media_content_keys`
+미디어 컨텐츠 키 정보를 저장하는 테이블
+
+**Properties**
+  - `id`: Primary Key
+  - `title`: 레슨ID
+  - `filename`: 파일명
+  - `category`: 카테고리
+  - `channel`: 채널 정보(모두 동일)
+  - `media_content_key`: 미디어 컨텐츠 키(secret)
+  - `time`
+    > 시간 정보
+    > 
+    > hh:mm:ss:SSS
+  - `duration_ms`: 재생 시간 (밀리초)
+  - `modified_at`: 수정일
+  - `created_at`: 생성일
+  - `removed_at`: 삭제일
+
+### `config_variables`
+시스템 설정 변수를 저장하는 테이블
+
+**Properties**
+  - `variable_name`
+    > Primary Key
+    > 
+    > 변수명을 키로 사용
+  - `value`: 변수값
+  - `modified_at`: 수정일
+  - `created_at`: 생성일
+  - `removed_at`: 삭제일

@@ -360,3 +360,68 @@ model ProblemSet {
 
   @@map("problem_sets")
 }
+
+/// 미디어 컨텐츠 키 정보를 저장하는 테이블
+model MediaContentKey {
+  /// Primary Key
+  id              Int       @id @default(autoincrement())
+
+  /// 레슨ID
+  title           String?   @db.VarChar(255)
+
+  /// 파일명
+  filename        String?   @db.VarChar(255)
+
+  /// 카테고리
+  category        String?   @db.VarChar(255)
+
+  /// 채널 정보(모두 동일)
+  channel         String?   @db.VarChar(255)
+
+  /// 미디어 컨텐츠 키(secret)
+  mediaContentKey String?   @map("media_content_key") @db.VarChar(255)
+
+  /// 시간 정보
+  ///
+  /// hh:mm:ss:SSS
+  time            String?   @db.VarChar(50)
+
+  /// 재생 시간 (밀리초)
+  durationMs      Int?      @map("duration_ms")
+
+  /// 수정일
+  modifiedAt      DateTime? @map("modified_at")
+
+  /// 생성일
+  createdAt       DateTime? @map("created_at")
+
+  /// 삭제일
+  removedAt       DateTime? @map("removed_at")
+
+  @@index([mediaContentKey])
+  @@index([title])
+  @@map("media_content_keys")
+}
+
+/// 시스템 설정 변수를 저장하는 테이블
+model ConfigVariable {
+  /// Primary Key
+  ///
+  /// 변수명을 키로 사용
+  variableName  String    @id @map("variable_name") @db.VarChar(40)
+
+  /// 변수값
+  value         String?   @db.MediumText
+
+  /// 수정일
+  modifiedAt    DateTime? @map("modified_at")
+
+  /// 생성일
+  createdAt     DateTime? @map("created_at")
+
+  /// 삭제일
+  removedAt     DateTime? @map("removed_at")
+
+  @@map("config_variables")
+}
+
