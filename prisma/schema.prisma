@@ -14,6 +14,7 @@ generator markdown {
   title    = "Atlas"
 }
 
+/// utf8mb4_general_ci 를 사용
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
@@ -32,13 +33,14 @@ datasource db {
 /// **서버는 파일명을 생성하고 presigned url 로 직접 클라이언트가 올리도록 하는 방식**
 ///
 /// #### 메모작성 시
-/// - 사용자가 문제를 풀떄, 메모는 클라이언트가 메모저장 할때 업로드 된다
+///
+/// - 메모는 클라이언트가 메모저장 할때 업로드 된다
 ///
 /// - 문제에 대한 메모를 작성해야 할때 클라이언트는 서버에 요청한다
 ///
 /// - 서버는 aws presigned url 을 생성하여 클라이언트에 내려주고
 ///
-/// - 클라이언트는 
+/// - 클라이언트는 메모파일을 업로드한다
 /// 
 /// 메모수정 시
 /// 
@@ -176,8 +178,8 @@ model LessonSession {
   /// - 비디오만 볼 수 있는 타입: ProblemSets 없음
   category    String        @db.VarChar(128)
 
-  /// 
-  problems    String?       @db.VarChar(255)
+  /// 문제 데이터 (JSON 형태로 저장)
+  problems    String?       @db.Text
 
   /// 레슨 시작시간
   startedAt   DateTime      @map("staretd_at")
@@ -307,6 +309,9 @@ model ProblemSet {
 
   /// 학습내역 하나에 대한 외래키
   sessionId   BigInt    @map("session_id")
+
+  /// 부모 문제 ID (스텝문제인 경우 메인문제의 ID, 메인문제인 경우 null)
+  parentId    BigInt?   @map("parent_id")
 
   /// 로시안 문제번호
   problemId   Int       @map("problem_id")

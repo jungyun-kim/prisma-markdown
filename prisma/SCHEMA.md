@@ -67,6 +67,7 @@ erDiagram
 "problem_sets" {
   BigInt id PK
   BigInt session_id FK
+  BigInt parent_id "nullable"
   Int problem_id
   Int unit_id
   Int sequence
@@ -118,13 +119,14 @@ erDiagram
 **서버는 파일명을 생성하고 presigned url 로 직접 클라이언트가 올리도록 하는 방식**
 
 #### 메모작성 시
-- 사용자가 문제를 풀떄, 메모는 클라이언트가 메모저장 할때 업로드 된다
+
+- 메모는 클라이언트가 메모저장 할때 업로드 된다
 
 - 문제에 대한 메모를 작성해야 할때 클라이언트는 서버에 요청한다
 
 - 서버는 aws presigned url 을 생성하여 클라이언트에 내려주고
 
-- 클라이언트는 
+- 클라이언트는 메모파일을 업로드한다
 
 메모수정 시
 
@@ -218,7 +220,7 @@ provider, channelUserId 가 복합키로 설정되어 있음
     > - 학습할 수 있는 타입: ProblemSets 존재
     > 
     > - 비디오만 볼 수 있는 타입: ProblemSets 없음
-  - `problems`: 
+  - `problems`: 문제 데이터 (JSON 형태로 저장)
   - `staretd_at`: 레슨 시작시간
   - `ended_at`: 레슨 종료시간
   - `modified_at`: 수정일
@@ -281,6 +283,7 @@ row2 { sessionId: 1000, problemId: 444, unitId: 4, sequence: 0, context: lesson,
 **Properties**
   - `id`: Primary Key
   - `session_id`: 학습내역 하나에 대한 외래키
+  - `parent_id`: 부모 문제 ID (스텝문제인 경우 메인문제의 ID, 메인문제인 경우 null)
   - `problem_id`: 로시안 문제번호
   - `unit_id`: 로시안 유닛번호
   - `sequence`: 문제의 순서, 1번째 문제
