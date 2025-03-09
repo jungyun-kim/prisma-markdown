@@ -1,3 +1,4 @@
+```mermaid
 sequenceDiagram
   actor User as 사용자
   participant Client as 클라이언트 (앱/웹)
@@ -13,5 +14,5 @@ sequenceDiagram
   else 입력이 유효하지 않은 경우
     Server ->> Client: 400 Bad Request (에러 메시지)
   end
-
+```
 
