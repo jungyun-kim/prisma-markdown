@@ -139,6 +139,11 @@ model UserCurriculum {
   user         User      @relation(fields: [userId], references: [id])
   curriculum   Curriculum @relation(fields: [curriculumId], references: [id])
 
+  /// 유저의 기본 설정화면
+  /// 유저의 홈 화면을 [홈], [커리큘럼] (이름은 변경될 수 있음)
+  home         String    @default("home")
+
+
   @@id([userId, curriculumId])
   @@map("user_curriculums")
 }

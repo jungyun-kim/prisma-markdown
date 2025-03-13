@@ -10,6 +10,11 @@
 - Error Handling: Custom Error Classes
 
 ## API 설계 규칙
+- GET, POST 두가지 메소드만으로 구성
+- GET은 서버의 자원을 얻어갈때 사용
+- POST는 서버에서 자원을 생성할때 사용
+- 멱등성 미들웨어로 같은 요청이라고 생각되면 `Idempotency-Key` 를 같은걸 넣어줌
+- 
 
 ### HTTP 메소드
 - **GET**: 리소스 조회
@@ -135,9 +140,6 @@ interface ErrorResponse {
 - Unique 제약: 비즈니스 규칙에 따라 적용
 - Foreign Key: 관계 무결성 보장
 
-## 매핑 규칙 (Prisma)
-- `
-
 ## 인증
 ### JWT 토큰 구조
 ```typescript
@@ -152,7 +154,7 @@ interface JWTPayload {
 
 ### 토큰 관리
 - Access Token: 2시간 유효
-- Refresh Token: 2주 유효
+- Refresh Token: 없음
 - Authorization 헤더: `Bearer {token}`
 
 ## 모니터링
