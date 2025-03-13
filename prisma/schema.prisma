@@ -257,6 +257,9 @@ model User {
   ///
   role            String           @db.VarChar(255)
 
+  /// 활성화 여부
+  isActive        Boolean          @default(true)
+
   /// 마지막 로그인 시간
   lastLogin       DateTime         @map("last_login")
 
@@ -435,3 +438,51 @@ model ConfigVariable {
   @@map("config_variables")
 }
 
+
+/// 유저가 가지고 있는 지식을 표현하기 위한 테이블 elo 점수
+///
+/// 1:1 로 구현이 되어있어 User 를 조회하면 모든 지식을 조회할 수 있음
+///
+/// 이 테이블이 존재하지 않고 elo_change_logs 테이블에만 의존하면
+///
+/// 유저가 가지고 있는 지식을 조회하기 위해서는 group by 와 order by 를 사용해 조회해서 LIMIT 1 을 사용해야함
+///
+/// 어느게 더 좋을지는 모르겠음
+model UserSynapse {
+  /// Primary Key
+  id              Int   @id @default(autoincrement())
+
+  /// 유저의 ID
+  userId         BigInt    @map("user_id")
+
+  /// 지식의 ID
+  knowledgeId    Int       @map("knowledge_id")
+
+  /// elo 점수
+  eloScore       Int       @map("elo_score")
+
+  /// 생성일
+  createdAt      DateTime  @map("created_at")
+
+  /// 수정일
+  updatedAt      DateTime  @map("updated_at")
+
+  @@map("user_synapses")
+  @@unique([userId, knowledgeId])
+}
+
+/// 지식 선수관계 테이블? (로시안에서 이 관계들을 정의하여 API로 내려주긴 할것임, 이를 테이블에 또 저장해야하는가?)
+
+/// elo_change_logs 테이블
+///
+/// 이 테이블은 인서트만 하는게 어떨까....
+/// 
+/// LIMIT 1 로 최근걸 가져올수 있다
+///
+/// 유저의 elo 점수 변화 로그
+/// 
+/// 유저의 지식 선수관계 변화 로그
+/// 
+/// 
+
+/// 지식을 유저별로 얼마나 완료되었는지 추적하는 친구

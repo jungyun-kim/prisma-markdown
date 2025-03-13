@@ -27,6 +27,7 @@ erDiagram
   Int curriculum_id FK
   Boolean is_default
   Boolean is_active
+  String home
 }
 "lesson_sessions" {
   BigInt id PK
@@ -55,6 +56,7 @@ erDiagram
 "users" {
   BigInt id PK
   String role
+  Boolean isActive
   DateTime last_login
   DateTime created_at "nullable"
 }
@@ -95,6 +97,14 @@ erDiagram
   DateTime modified_at "nullable"
   DateTime created_at "nullable"
   DateTime removed_at "nullable"
+}
+"user_synapses" {
+  Int id PK
+  BigInt user_id
+  Int knowledge_id
+  Int elo_score
+  DateTime created_at
+  DateTime updated_at
 }
 "user_channels" |o--|| "users" : user
 "user_curriculums" }o--|| "users" : user
@@ -191,6 +201,9 @@ provider, channelUserId 가 복합키로 설정되어 있음
     > 만약 중1-1 커리큘럼을 수강하다가 초등학생 커리큘럼을 수강한다면 true
     > 
     > 초등학생 커리큘럼을 두달후에 중단한다면 false 로 변경
+  - `home`
+    > 유저의 기본 설정화면
+    > 유저의 홈 화면을 [홈], [커리큘럼] (이름은 변경될 수 있음)
 
 ### `lesson_sessions`
 유저기반 학습내역을 저장
@@ -251,6 +264,7 @@ provider, channelUserId 가 복합키로 설정되어 있음
     > 유저의 권한
     > 
     > [개념학습, 연산학습, 둘다], [중학생 커리큘럼만], [초등학교 커리큘럼, 중학교 커리큘럼]
+  - `isActive`: 활성화 여부
   - `last_login`: 마지막 로그인 시간
   - `created_at`: 생성일
 
@@ -349,3 +363,22 @@ row2 { sessionId: 1000, problemId: 444, unitId: 4, sequence: 0, context: lesson,
   - `modified_at`: 수정일
   - `created_at`: 생성일
   - `removed_at`: 삭제일
+
+### `user_synapses`
+유저가 가지고 있는 지식을 표현하기 위한 테이블 elo 점수
+
+1:1 로 구현이 되어있어 User 를 조회하면 모든 지식을 조회할 수 있음
+
+이 테이블이 존재하지 않고 elo_change_logs 테이블에만 의존하면
+
+유저가 가지고 있는 지식을 조회하기 위해서는 group by 와 order by 를 사용해 조회해서 LIMIT 1 을 사용해야함
+
+어느게 더 좋을지는 모르겠음
+
+**Properties**
+  - `id`: Primary Key
+  - `user_id`: 유저의 ID
+  - `knowledge_id`: 지식의 ID
+  - `elo_score`: elo 점수
+  - `created_at`: 생성일
+  - `updated_at`: 수정일

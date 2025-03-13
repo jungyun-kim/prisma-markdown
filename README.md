@@ -1,16 +1,26 @@
 # Atlas
 
-## 기술 스택
+## 백엔드 기술 스택
 - Language: TypeScript
 - Database: MySQL (with Prisma ORM)
+  - raw sql 을 빌드해서 타입추론을 가능하게 하는 기능 https://www.prisma.io/docs/orm/prisma-client/using-raw-sql/typedsql?utm_campaign=typedsql
 - API: HTTP REST
 - Authentication: JWT + Cookie
-- HTTP Client: got
+- HTTP Client: got or @toss/ky
 - Monitoring: AWS SNS-SQS
 - Error Handling: Custom Error Classes
+- 로시안 aws cdn 을 사용
+- zod, joi ?
+- redis 진짜 필요한가? (레슨 동시진입시, 락을 거는 용도)
+
+## 프론트 기술 스택
+ - Next.js
+ - React
+ - ?
+
 
 ## API 설계 규칙
-- GET, POST 두가지 메소드만으로 구성
+- GET, POST 두가지 메소드만으로 구성(필요 시 PATCH 추가)
 - GET은 서버의 자원을 얻어갈때 사용
 - POST는 서버에서 자원을 생성할때 사용
 - 멱등성 미들웨어로 같은 요청이라고 생각되면 `Idempotency-Key` 를 같은걸 넣어줌
