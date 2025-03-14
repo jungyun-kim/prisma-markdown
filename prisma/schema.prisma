@@ -51,37 +51,40 @@ model ProblemMemo {
   /// 메모를 저장하기 위해 uuid 를 미리 생성
   ///
   /// @format uuid v7
-  memoUuid   Bytes     @id @default(dbgenerated("(uuid_to_bin(uuid()))")) @db.Binary(16)
-  
+  memoUuid Bytes @id @default(dbgenerated("(uuid_to_bin(uuid()))")) @db.Binary(16)
+
   /// s3에 저장될 경로
   ///
   /// 도메인은 저장하지 않아야 함
   ///
   /// memo/uuid.png
-  filePath   String?   @map("file_path") @db.Text
+  filePath String? @map("file_path") @db.Text
 
   /// soft delete 를 지원하기 위한 컬럼
   ///
   /// 주기적으로 테이블에서 removed_at 으로 검색하여 삭제
-  removedAt  DateTime? @map("removed_at")
+  removedAt DateTime? @map("removed_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   @@map("problem_memos")
 }
 
 model Curriculum {
-  id                Int               @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   /// 커리큘럼 이름
-  name             String            @db.VarChar(128)
+  name String @db.VarChar(128)
 
   /// 커리큘럼 e.g) 1SEMESTER, 2SEMESTER, 3SEMESTER
-  curriculum       String            @db.VarChar(128)
+  curriculum String   @db.VarChar(128)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
-  userCurriculums  UserCurriculum[]
+  userCurriculums UserCurriculum[]
 
   @@map("curriculums")
 }
-
 
 ///
 /// 다른 채널(성장판, 페이스북, 구글, 내부계정 등) 에서 가입된 유저를 모두 하나로 연결할 수 있도록 구성
@@ -94,17 +97,17 @@ model Curriculum {
 ///
 model UserChannel {
   /// 
-  userId         BigInt    @map("user_id")
+  userId BigInt @map("user_id")
 
   /// 성장판, google, 다른 가입 채널들
-  provider       String    @db.VarChar(128)
+  provider String @db.VarChar(128)
 
   /// 성장판에서 사용하고 있는 유저ID or google 에서 사용하고 있는 userId
-  channelUserId  String    @map("channel_user_id") @db.VarChar(128)
+  channelUserId String @map("channel_user_id") @db.VarChar(128)
 
   /// 생성일
-  createdAt      DateTime? @map("created_at")
-  user           User      @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
 
   @@id([provider, channelUserId])
   @@unique([userId])
@@ -114,10 +117,10 @@ model UserChannel {
 /// 유저가 가입한 커리큘럼 정보
 model UserCurriculum {
   /// 유저의 ID
-  userId       BigInt     @map("user_id")
+  userId BigInt @map("user_id")
 
   /// 커리큘럼의 ID
-  curriculumId Int       @map("curriculum_id")
+  curriculumId Int @map("curriculum_id")
 
   /// 기본 커리큘럼 여부
   /// 
@@ -126,7 +129,7 @@ model UserCurriculum {
   /// 자신의 본 커리큘럼이라고 보는게 맞을듯함
   ///
   /// 예를 들어 중2-1 에서 학습중이고, 중1-1 로 진도를 수정했을때 자신의 본 커리큘럼을 잊지 않도록 함
-  isDefault    Boolean   @map("is_default")
+  isDefault Boolean @map("is_default")
 
   /// 활성화 여부
   /// 각 커리큘럼이 활성화 상태를 저장
@@ -134,15 +137,14 @@ model UserCurriculum {
   /// 만약 중1-1 커리큘럼을 수강하다가 초등학생 커리큘럼을 수강한다면 true
   ///
   /// 초등학생 커리큘럼을 두달후에 중단한다면 false 로 변경
-  isActive     Boolean   @map("is_active")
+  isActive Boolean @map("is_active")
 
-  user         User      @relation(fields: [userId], references: [id])
-  curriculum   Curriculum @relation(fields: [curriculumId], references: [id])
+  user       User       @relation(fields: [userId], references: [id])
+  curriculum Curriculum @relation(fields: [curriculumId], references: [id])
 
   /// 유저의 기본 설정화면
   /// 유저의 홈 화면을 [홈], [커리큘럼] (이름은 변경될 수 있음)
-  home         String    @default("home")
-
+  home String @default("home")
 
   @@id([userId, curriculumId])
   @@map("user_curriculums")
@@ -165,40 +167,40 @@ model UserCurriculum {
 /// 두가지를 분리하기 위해 카테고리 컬럼을 추가
 model LessonSession {
   /// Primary Key
-  id          BigInt        @id @default(autoincrement())
+  id BigInt @id @default(autoincrement())
 
   /// 유저의 ID
-  userId      BigInt        @map("user_id")
+  userId BigInt @map("user_id")
 
   /// 로시안에서 관리하고 있는 compositeId
-  compositeId String        @map("composite_id") @db.VarChar(128)
+  compositeId String @map("composite_id") @db.VarChar(128)
 
   /// 레슨에서 받은 점수
-  score       Int?
+  score Int?
 
   /// 학습 카테고리
   /// 
   /// - 학습할 수 있는 타입: ProblemSets 존재
   ///
   /// - 비디오만 볼 수 있는 타입: ProblemSets 없음
-  category    String        @db.VarChar(128)
+  category String @db.VarChar(128)
 
   /// 문제 데이터 (JSON 형태로 저장)
-  problems    String?       @db.Text
+  problems String? @db.Text
 
   /// 레슨 시작시간
-  startedAt   DateTime      @map("staretd_at")
+  startedAt DateTime @default(now()) @map("staretd_at")
 
   /// 레슨 종료시간
-  endedAt     DateTime?     @map("ended_at")
+  endedAt DateTime? @map("ended_at")
 
   /// 수정일
-  modifiedAt  DateTime      @map("modified_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   /// 생성일
-  createdAt   DateTime      @map("created_at")
-  user        User          @relation(fields: [userId], references: [id])
-  identifier  LessonIdentifier @relation(fields: [compositeId], references: [compositeId])
+  createdAt  DateTime         @default(now()) @map("created_at")
+  user       User             @relation(fields: [userId], references: [id])
+  identifier LessonIdentifier @relation(fields: [compositeId], references: [compositeId])
 
   /// 문제 세트 목록
   /// - 비디오 타입일 경우: 빈 배열 []
@@ -218,58 +220,61 @@ model LessonSession {
 /// 내부 계정과 외부 인증(OAuth) 정보를 모두 관리
 model UserAuth {
   /// Primary Key
-  userId         BigInt    @id @map("user_id")
+  userId BigInt @id @map("user_id")
 
   /// 인증 제공자 (local, google, facebook 등)
-  provider       String    @map("provider") @db.VarChar(128)
+  provider String @map("provider") @db.VarChar(128)
 
   /// 내부 계정용 비밀번호 (provider가 local일 경우)
-  hashedPassword String?   @map("hashed_password") @db.VarChar(255)
-  passwordSalt   String?   @map("password_salt") @db.VarChar(128)
+  hashedPassword String? @map("hashed_password") @db.VarChar(255)
+  passwordSalt   String? @map("password_salt") @db.VarChar(128)
 
   /// OAuth 관련 정보 (외부 인증의 경우)
-  accessToken    String?   @map("access_token") @db.VarChar(1024)
-  refreshToken   String?   @map("refresh_token") @db.VarChar(1024)
-  expiresAt      DateTime? @map("expires_at")
-  
+  accessToken  String?   @map("access_token") @db.VarChar(1024)
+  refreshToken String?   @map("refresh_token") @db.VarChar(1024)
+  expiresAt    DateTime? @map("expires_at")
+
   /// OAuth 제공자별 추가 정보 (JSON 형태로 저장)
-  metadata       String?   @db.Text
+  metadata String? @db.Text
 
   /// 생성일
-  createdAt      DateTime  @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   /// 수정일
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   /// User 테이블과의 관계
-  user           User      @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@map("user_auths")
 }
 
 model User {
   /// Primary Key
-  id              BigInt           @id @default(autoincrement())
+  id BigInt @id @default(autoincrement())
 
   /// 유저의 권한
   /// 
   /// [개념학습, 연산학습, 둘다], [중학생 커리큘럼만], [초등학교 커리큘럼, 중학교 커리큘럼]
   ///
-  role            String           @db.VarChar(255)
+  role String @db.VarChar(255)
 
   /// 활성화 여부
-  isActive        Boolean          @default(true)
+  isActive Boolean @default(true)
 
   /// 마지막 로그인 시간
-  lastLogin       DateTime         @map("last_login")
+  lastLogin DateTime @map("last_login")
 
   /// 생성일
-  createdAt       DateTime?        @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  /// 수정일
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   userChannel     UserChannel?
   userCurriculums UserCurriculum[]
   lessonSessions  LessonSession[]
-  auth           UserAuth?
+  auth            UserAuth?
 
   @@map("users")
 }
@@ -283,12 +288,12 @@ model User {
 /// 복합키의 개념을 테이블에서도 저장하여 사용
 model LessonIdentifier {
   /// lessonId, type, extra 세가지를 묶는 복합키
-  compositeId    String          @id @map("composite_id") @db.VarChar(128)
+  compositeId String @id @map("composite_id") @db.VarChar(128)
   /// 로시안에서 관리되고 있는 lessonId
-  lessonId       Int             @map("lesson_id")
+  lessonId    Int    @map("lesson_id")
 
   /// 로시안에서 관리되고 있는 학습유형 (LESSON, SECLESSON, REVIEW, SECREVIEW, TUTORIAL...)
-  type           String          @db.VarChar(128)
+  type String @db.VarChar(128)
 
   /// null, 1, SEMESTER, [51123], [51123, 51124], [51129, 1] 등으로 각각의 타입마다 의미하는 바가 다름
   extra          String?         @db.VarChar(256)
@@ -313,22 +318,22 @@ model LessonIdentifier {
 ///
 model ProblemSet {
   /// Primary Key
-  id          BigInt    @id @default(autoincrement())
+  id BigInt @id @default(autoincrement())
 
   /// 학습내역 하나에 대한 외래키
-  sessionId   BigInt    @map("session_id")
+  sessionId BigInt @map("session_id")
 
   /// 부모 문제 ID (스텝문제인 경우 메인문제의 ID, 메인문제인 경우 null)
-  parentId    BigInt?   @map("parent_id")
+  parentId BigInt? @map("parent_id")
 
   /// 로시안 문제번호
-  problemId   Int       @map("problem_id")
+  problemId Int @map("problem_id")
 
   /// 로시안 유닛번호
-  unitId      Int       @map("unit_id")
+  unitId Int @map("unit_id")
 
   /// 문제의 순서, 1번째 문제
-  sequence    Int
+  sequence Int
 
   /// 문제를 어디에서 풀었는지 확인하는 컬럼
   ///
@@ -338,10 +343,10 @@ model ProblemSet {
   /// 
   /// 이 부분들을 각각 조회해서 서버에서 조립해주어야 하는 부분이 있었음
   ///
-  context     String    @db.VarChar(128)
+  context String @db.VarChar(128)
 
   /// 스텝문제인지 확인하는 플래그
-  isStep      Boolean   @map("is_step")
+  isStep Boolean @map("is_step")
 
   /// 문제의 상태
   ///
@@ -364,12 +369,12 @@ model ProblemSet {
   /// 스텝문제에서는 자신의 상태만 기록한다(틀리고 맞음)
   ///
   /// 
-  status      String?    @db.VarChar(128)
+  status String? @db.VarChar(128)
 
   /// 생성일
-  createdAt   DateTime? @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  session     LessonSession @relation(fields: [sessionId], references: [id])
+  session LessonSession @relation(fields: [sessionId], references: [id])
 
   @@map("problem_sets")
 }
@@ -377,39 +382,39 @@ model ProblemSet {
 /// 미디어 컨텐츠 키 정보를 저장하는 테이블
 model MediaContentKey {
   /// Primary Key
-  id              Int       @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   /// 레슨ID
-  title           String?   @db.VarChar(255)
+  title String? @db.VarChar(255)
 
   /// 파일명
-  filename        String?   @db.VarChar(255)
+  filename String? @db.VarChar(255)
 
   /// 카테고리
-  category        String?   @db.VarChar(255)
+  category String? @db.VarChar(255)
 
   /// 채널 정보(모두 동일)
-  channel         String?   @db.VarChar(255)
+  channel String? @db.VarChar(255)
 
   /// 미디어 컨텐츠 키(secret)
-  mediaContentKey String?   @map("media_content_key") @db.VarChar(255)
+  mediaContentKey String? @map("media_content_key") @db.VarChar(255)
 
   /// 시간 정보
   ///
   /// hh:mm:ss:SSS
-  time            String?   @db.VarChar(50)
+  time String? @db.VarChar(50)
 
   /// 재생 시간 (밀리초)
-  durationMs      Int?      @map("duration_ms")
+  durationMs Int? @map("duration_ms")
 
   /// 수정일
-  modifiedAt      DateTime? @map("modified_at")
+  modifiedAt DateTime? @map("modified_at")
 
   /// 생성일
-  createdAt       DateTime? @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   /// 삭제일
-  removedAt       DateTime? @map("removed_at")
+  removedAt DateTime? @map("removed_at")
 
   @@index([mediaContentKey])
   @@index([title])
@@ -421,23 +426,22 @@ model ConfigVariable {
   /// Primary Key
   ///
   /// 변수명을 키로 사용
-  variableName  String    @id @map("variable_name") @db.VarChar(40)
+  variableName String @id @map("variable_name") @db.VarChar(40)
 
   /// 변수값
-  value         String?   @db.MediumText
+  value String? @db.MediumText
 
   /// 수정일
-  modifiedAt    DateTime? @map("modified_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   /// 생성일
-  createdAt     DateTime? @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   /// 삭제일
-  removedAt     DateTime? @map("removed_at")
+  removedAt DateTime? @map("removed_at")
 
   @@map("config_variables")
 }
-
 
 /// 유저가 가지고 있는 지식을 표현하기 위한 테이블 elo 점수
 ///
@@ -450,28 +454,26 @@ model ConfigVariable {
 /// 어느게 더 좋을지는 모르겠음
 model UserSynapse {
   /// Primary Key
-  id              Int   @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   /// 유저의 ID
-  userId         BigInt    @map("user_id")
+  userId BigInt @map("user_id")
 
   /// 지식의 ID
-  knowledgeId    Int       @map("knowledge_id")
+  knowledgeId Int @map("knowledge_id")
 
   /// elo 점수
-  eloScore       Int       @map("elo_score")
+  eloScore Int @map("elo_score")
 
   /// 생성일
-  createdAt      DateTime  @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   /// 수정일
-  updatedAt      DateTime  @map("updated_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@map("user_synapses")
   @@unique([userId, knowledgeId])
+  @@map("user_synapses")
 }
-
-/// 지식 선수관계 테이블? (로시안에서 이 관계들을 정의하여 API로 내려주긴 할것임, 이를 테이블에 또 저장해야하는가?)
 
 /// elo_change_logs 테이블
 ///
@@ -483,6 +485,42 @@ model UserSynapse {
 /// 
 /// 유저의 지식 선수관계 변화 로그
 /// 
-/// 
+/// 학습_세션: 사용자가 학습 모듈을 완료했습니다.
+///
+/// 문제_풀이: 사용자가 문제를 맞히거나 틀렸습니다.
+///
+/// 기타: 다른 이유 (예: 관리자 조정). 
+///
+model EloChangeLogs {
+  /// Primary Key
+  id Int @id @default(autoincrement())
 
-/// 지식을 유저별로 얼마나 완료되었는지 추적하는 친구
+  /// 유저의 ID
+  userId BigInt @map("user_id")
+
+  /// 지식의 ID
+  knowledgeId Int @map("knowledge_id")
+
+  /// 이전 elo 점수
+  previousEloScore Int @map("previous_elo_score")
+
+  /// elo 점수
+  eloScore Int @map("elo_score")
+
+  /// 점수 변화량
+  eloChange Int @map("elo_change")
+
+  /// 변화 이유
+  changeReason String @map("change_reason")
+
+  /// 생성일
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("elo_change_logs")
+}
+
+/// 지식을 유저별로 얼마나 완료되었는지 추적하는 테이블 이 테이블이 없다면 항상 유저의 모든 학습을 검색해야함
+///
+
+/// 지식 선수관계 테이블? (로시안에서 이 관계들을 정의하여 API로 내려주긴 할것임, 이를 테이블에 또 저장해야하는가?)
+///

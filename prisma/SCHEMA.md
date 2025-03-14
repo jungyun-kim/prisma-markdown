@@ -10,17 +10,21 @@ erDiagram
   Bytes memoUuid PK
   String file_path "nullable"
   DateTime removed_at "nullable"
+  DateTime created_at
+  DateTime updated_at
 }
 "curriculums" {
   Int id PK
   String name
   String curriculum
+  DateTime created_at
+  DateTime updated_at
 }
 "user_channels" {
   BigInt user_id FK
   String provider
   String channel_user_id
-  DateTime created_at "nullable"
+  DateTime created_at
 }
 "user_curriculums" {
   BigInt user_id FK
@@ -38,7 +42,7 @@ erDiagram
   String problems "nullable"
   DateTime staretd_at
   DateTime ended_at "nullable"
-  DateTime modified_at
+  DateTime updated_at
   DateTime created_at
 }
 "user_auths" {
@@ -58,7 +62,8 @@ erDiagram
   String role
   Boolean isActive
   DateTime last_login
-  DateTime created_at "nullable"
+  DateTime created_at
+  DateTime updated_at
 }
 "lesson_identifiers" {
   String composite_id PK
@@ -76,7 +81,7 @@ erDiagram
   String context
   Boolean is_step
   String status "nullable"
-  DateTime created_at "nullable"
+  DateTime created_at
 }
 "media_content_keys" {
   Int id PK
@@ -88,14 +93,14 @@ erDiagram
   String time "nullable"
   Int duration_ms "nullable"
   DateTime modified_at "nullable"
-  DateTime created_at "nullable"
+  DateTime created_at
   DateTime removed_at "nullable"
 }
 "config_variables" {
   String variable_name PK
   String value "nullable"
-  DateTime modified_at "nullable"
-  DateTime created_at "nullable"
+  DateTime updated_at
+  DateTime created_at
   DateTime removed_at "nullable"
 }
 "user_synapses" {
@@ -105,6 +110,16 @@ erDiagram
   Int elo_score
   DateTime created_at
   DateTime updated_at
+}
+"elo_change_logs" {
+  Int id PK
+  BigInt user_id
+  Int knowledge_id
+  Int previous_elo_score
+  Int elo_score
+  Int elo_change
+  String change_reason
+  DateTime created_at
 }
 "user_channels" |o--|| "users" : user
 "user_curriculums" }o--|| "users" : user
@@ -157,6 +172,8 @@ erDiagram
     > soft delete 를 지원하기 위한 컬럼
     > 
     > 주기적으로 테이블에서 removed_at 으로 검색하여 삭제
+  - `created_at`: 
+  - `updated_at`: 
 
 ### `curriculums`
 
@@ -164,6 +181,8 @@ erDiagram
   - `id`: 
   - `name`: 커리큘럼 이름
   - `curriculum`: 커리큘럼 e.g) 1SEMESTER, 2SEMESTER, 3SEMESTER
+  - `created_at`: 
+  - `updated_at`: 
 
 ### `user_channels`
 다른 채널(성장판, 페이스북, 구글, 내부계정 등) 에서 가입된 유저를 모두 하나로 연결할 수 있도록 구성
@@ -236,7 +255,7 @@ provider, channelUserId 가 복합키로 설정되어 있음
   - `problems`: 문제 데이터 (JSON 형태로 저장)
   - `staretd_at`: 레슨 시작시간
   - `ended_at`: 레슨 종료시간
-  - `modified_at`: 수정일
+  - `updated_at`: 수정일
   - `created_at`: 생성일
 
 ### `user_auths`
@@ -267,6 +286,7 @@ provider, channelUserId 가 복합키로 설정되어 있음
   - `isActive`: 활성화 여부
   - `last_login`: 마지막 로그인 시간
   - `created_at`: 생성일
+  - `updated_at`: 수정일
 
 ### `lesson_identifiers`
 lessonId, type, extra 세가지를 묶는 복합키로 스코어수학에서는 compositeId 개념이 있음
@@ -360,7 +380,7 @@ row2 { sessionId: 1000, problemId: 444, unitId: 4, sequence: 0, context: lesson,
     > 
     > 변수명을 키로 사용
   - `value`: 변수값
-  - `modified_at`: 수정일
+  - `updated_at`: 수정일
   - `created_at`: 생성일
   - `removed_at`: 삭제일
 
@@ -382,3 +402,30 @@ row2 { sessionId: 1000, problemId: 444, unitId: 4, sequence: 0, context: lesson,
   - `elo_score`: elo 점수
   - `created_at`: 생성일
   - `updated_at`: 수정일
+
+### `elo_change_logs`
+elo_change_logs 테이블
+
+이 테이블은 인서트만 하는게 어떨까....
+
+LIMIT 1 로 최근걸 가져올수 있다
+
+유저의 elo 점수 변화 로그
+
+유저의 지식 선수관계 변화 로그
+
+학습_세션: 사용자가 학습 모듈을 완료했습니다.
+
+문제_풀이: 사용자가 문제를 맞히거나 틀렸습니다.
+
+기타: 다른 이유 (예: 관리자 조정). 
+
+**Properties**
+  - `id`: Primary Key
+  - `user_id`: 유저의 ID
+  - `knowledge_id`: 지식의 ID
+  - `previous_elo_score`: 이전 elo 점수
+  - `elo_score`: elo 점수
+  - `elo_change`: 점수 변화량
+  - `change_reason`: 변화 이유
+  - `created_at`: 생성일
