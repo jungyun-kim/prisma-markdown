@@ -16,8 +16,9 @@ generator markdown {
 
 /// utf8mb4_general_ci 를 사용
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 /// #### 메모의 케이스
@@ -51,7 +52,7 @@ model ProblemMemo {
   /// 메모를 저장하기 위해 uuid 를 미리 생성
   ///
   /// @format uuid v7
-  memoUuid Bytes @id @default(dbgenerated("(uuid_to_bin(uuid()))")) @db.Binary(16)
+  memoUuid String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 
   /// s3에 저장될 경로
   ///
@@ -67,6 +68,7 @@ model ProblemMemo {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
+  @@index([removedAt]) // 주기적으로 삭제를 위함
   @@map("problem_memos")
 }
 
@@ -109,8 +111,9 @@ model UserChannel {
   createdAt DateTime @default(now()) @map("created_at")
   user      User     @relation(fields: [userId], references: [id])
 
-  @@id([provider, channelUserId])
+  @@id([userId, provider, channelUserId])
   @@unique([userId])
+  @@index([provider, channelUserId]) // 유저채널마다
   @@map("user_channels")
 }
 
@@ -147,6 +150,8 @@ model UserCurriculum {
   home String @default("home")
 
   @@id([userId, curriculumId])
+  @@index([userId, isDefault]) // 유저의 기본설정을 빠르게 확인하기 위함
+  @@index([userId, isActive]) // 유저가 활성화 되어있는지 확인하기 위함
   @@map("user_curriculums")
 }
 
@@ -180,9 +185,21 @@ model LessonSession {
 
   /// 학습 카테고리
   /// 
+  /// 만약 유저의 학습을 추적할수 있는 테이블이 있다면 category에서 VIDEO_ONLY 이런 타입은 빠져도 될듯함
+  /// 
   /// - 학습할 수 있는 타입: ProblemSets 존재
   ///
+  ///   - MAIN: 메인문제 학습
+  ///
+  ///   - RETRY: 메인문제 틀린문제 학습
+  ///
+  ///   - STUDYNOTE: 오답노트 학습
+  ///
+  ///   - STUDYNOTE_RETRY: 오답노트에서 틀린문제 학습
+  ///
   /// - 비디오만 볼 수 있는 타입: ProblemSets 없음
+  ///
+  ///   - VIDEO_ONLY
   category String @db.VarChar(128)
 
   /// 문제 데이터 (JSON 형태로 저장)
@@ -212,6 +229,16 @@ model LessonSession {
   /// 빈 배열을 통해 "문제 세트가 없는 상태"를 표현
   problemSets ProblemSet[]
 
+  /// EloChangeLogs와의 관계 정의
+  ///
+  /// 레슨하나가 종료되면 N개의 지식점수에 영향을 미칠 수 있음
+  eloChangeLogs EloChangeLogs[]
+
+  @@index([userId, category, startedAt, endedAt])
+
+  /// 복합 인덱스 추가
+  @@index([userId, compositeId], name: "idx_user_composite") 
+
   @@map("lesson_sessions")
 }
 
@@ -221,9 +248,6 @@ model LessonSession {
 model UserAuth {
   /// Primary Key
   userId BigInt @id @map("user_id")
-
-  /// 인증 제공자 (local, google, facebook 등)
-  provider String @map("provider") @db.VarChar(128)
 
   /// 내부 계정용 비밀번호 (provider가 local일 경우)
   hashedPassword String? @map("hashed_password") @db.VarChar(255)
@@ -260,7 +284,7 @@ model User {
   role String @db.VarChar(255)
 
   /// 활성화 여부
-  isActive Boolean @default(true)
+  isActive Boolean @default(true) @map("is_active")
 
   /// 마지막 로그인 시간
   lastLogin DateTime @map("last_login")
@@ -275,6 +299,10 @@ model User {
   userCurriculums UserCurriculum[]
   lessonSessions  LessonSession[]
   auth            UserAuth?
+
+  @@index([role]) // role 필터히기 위함
+  @@index([isActive]) // 활성화 사용자 찾기 위함
+  @@index([lastLogin]) // 로그인 분석을 위함
 
   @@map("users")
 }
@@ -332,9 +360,18 @@ model ProblemSet {
   /// 로시안 유닛번호
   unitId Int @map("unit_id")
 
+  /// 문제가 가진 eloScore
+  ///
+  /// 문제가 출제되면 문제의 eloScore를 저장한다
+  ///
+  /// 엄밀히 말하면 문제에 eloScore가 아니고, 유닛밑에 문제가 할당되어 있고 유닛에 eloScore 라고 보는게 맞음
+  eloScore Int @map("elo_score")
+
   /// 문제의 순서, 1번째 문제
   sequence Int
 
+  /// 필요가 진짜 있을지 확인필요
+  ///
   /// 문제를 어디에서 풀었는지 확인하는 컬럼
   ///
   /// - 틀린문제 다시풀기
@@ -343,7 +380,7 @@ model ProblemSet {
   /// 
   /// 이 부분들을 각각 조회해서 서버에서 조립해주어야 하는 부분이 있었음
   ///
-  context String @db.VarChar(128)
+  /// context String @db.VarChar(128)
 
   /// 스텝문제인지 확인하는 플래그
   isStep Boolean @map("is_step")
@@ -371,12 +408,43 @@ model ProblemSet {
   /// 
   status String? @db.VarChar(128)
 
+  /// 문제를 맞았는지 여부
+  isRight Boolean? @map("is_right")
+
   /// 생성일
   createdAt DateTime @default(now()) @map("created_at")
+  
+  /// 문제에 대한 정답 목록 (One-to-Many Relationship)
+  answers ProblemAnswer[]
 
   session LessonSession @relation(fields: [sessionId], references: [id])
 
   @@map("problem_sets")
+}
+
+model ProblemAnswer {
+  /// Primary Key
+  id BigInt @id @default(autoincrement())
+
+  /// ProblemSet들을 저장한 id
+  problemSetId BigInt @map("problem_set_id")
+
+  /// 정답
+  answer String? @db.Text
+
+  /// userId 도 저장한다면 검색에서 더 빠를수 있을것 같음, 실제로 ui 로 제공된다면 필요는 없을듯
+  userId BigInt @map("user_id")
+
+  /// 문제풀이 시도횟수
+  tryCount Int @map("try_count")
+
+  /// ProblemSet과의 관계 정의 (Many-to-One Relationship)
+  problemSet ProblemSet @relation(fields: [problemSetId], references: [id])
+
+  @@index([userId, problemSetId])
+  @@index([problemSetId, userId])
+
+  @@map("problem_answers")
 }
 
 /// 미디어 컨텐츠 키 정보를 저장하는 테이블
@@ -429,7 +497,7 @@ model ConfigVariable {
   variableName String @id @map("variable_name") @db.VarChar(40)
 
   /// 변수값
-  value String? @db.MediumText
+  value String? @db.Text
 
   /// 수정일
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -440,6 +508,7 @@ model ConfigVariable {
   /// 삭제일
   removedAt DateTime? @map("removed_at")
 
+  @@index([removedAt])
   @@map("config_variables")
 }
 
@@ -472,6 +541,8 @@ model UserSynapse {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([userId, knowledgeId])
+  @@index([knowledgeId]) // Added index for knowledge-based queries
+  @@index([eloScore]) // Added index for score-based filtering
   @@map("user_synapses")
 }
 
@@ -501,20 +572,22 @@ model EloChangeLogs {
   /// 지식의 ID
   knowledgeId Int @map("knowledge_id")
 
-  /// 이전 elo 점수
-  previousEloScore Int @map("previous_elo_score")
-
   /// elo 점수
   eloScore Int @map("elo_score")
 
-  /// 점수 변화량
-  eloChange Int @map("elo_change")
+  /// elo 점수에 영향을 끼친 세션의 ID
+  lessonSessionId BigInt @map("lesson_session_id")
 
   /// 변화 이유
   changeReason String @map("change_reason")
 
   /// 생성일
   createdAt DateTime @default(now()) @map("created_at")
+
+  /// LessonSession과의 관계 정의 (Many-to-One Relationship)
+  lessonSession LessonSession @relation(fields: [lessonSessionId], references: [id])
+
+  @@index([userId, knowledgeId])  
 
   @@map("elo_change_logs")
 }

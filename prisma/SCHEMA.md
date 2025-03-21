@@ -7,7 +7,7 @@
 ```mermaid
 erDiagram
 "problem_memos" {
-  Bytes memoUuid PK
+  String memoUuid PK
   String file_path "nullable"
   DateTime removed_at "nullable"
   DateTime created_at
@@ -47,7 +47,6 @@ erDiagram
 }
 "user_auths" {
   BigInt user_id PK
-  String provider
   String hashed_password "nullable"
   String password_salt "nullable"
   String access_token "nullable"
@@ -60,7 +59,7 @@ erDiagram
 "users" {
   BigInt id PK
   String role
-  Boolean isActive
+  Boolean is_active
   DateTime last_login
   DateTime created_at
   DateTime updated_at
@@ -77,11 +76,19 @@ erDiagram
   BigInt parent_id "nullable"
   Int problem_id
   Int unit_id
+  Int elo_score
   Int sequence
-  String context
   Boolean is_step
   String status "nullable"
+  Boolean is_right "nullable"
   DateTime created_at
+}
+"problem_answers" {
+  BigInt id PK
+  BigInt problem_set_id FK
+  String answer "nullable"
+  BigInt user_id
+  Int try_count
 }
 "media_content_keys" {
   Int id PK
@@ -115,9 +122,8 @@ erDiagram
   Int id PK
   BigInt user_id
   Int knowledge_id
-  Int previous_elo_score
   Int elo_score
-  Int elo_change
+  BigInt lesson_session_id FK
   String change_reason
   DateTime created_at
 }
@@ -128,6 +134,8 @@ erDiagram
 "lesson_sessions" }o--|| "lesson_identifiers" : identifier
 "user_auths" |o--|| "users" : user
 "problem_sets" }o--|| "lesson_sessions" : session
+"problem_answers" }o--|| "problem_sets" : problemSet
+"elo_change_logs" }o--|| "lesson_sessions" : lessonSession
 ```
 
 ### `problem_memos`
@@ -249,9 +257,21 @@ provider, channelUserId 가 복합키로 설정되어 있음
   - `category`
     > 학습 카테고리
     > 
+    > 만약 유저의 학습을 추적할수 있는 테이블이 있다면 category에서 VIDEO_ONLY 이런 타입은 빠져도 될듯함
+    > 
     > - 학습할 수 있는 타입: ProblemSets 존재
     > 
+    > - MAIN: 메인문제 학습
+    > 
+    > - RETRY: 메인문제 틀린문제 학습
+    > 
+    > - STUDYNOTE: 오답노트 학습
+    > 
+    > - STUDYNOTE_RETRY: 오답노트에서 틀린문제 학습
+    > 
     > - 비디오만 볼 수 있는 타입: ProblemSets 없음
+    > 
+    > - VIDEO_ONLY
   - `problems`: 문제 데이터 (JSON 형태로 저장)
   - `staretd_at`: 레슨 시작시간
   - `ended_at`: 레슨 종료시간
@@ -265,7 +285,6 @@ provider, channelUserId 가 복합키로 설정되어 있음
 
 **Properties**
   - `user_id`: Primary Key
-  - `provider`: 인증 제공자 (local, google, facebook 등)
   - `hashed_password`: 내부 계정용 비밀번호 (provider가 local일 경우)
   - `password_salt`: 
   - `access_token`: OAuth 관련 정보 (외부 인증의 경우)
@@ -283,7 +302,7 @@ provider, channelUserId 가 복합키로 설정되어 있음
     > 유저의 권한
     > 
     > [개념학습, 연산학습, 둘다], [중학생 커리큘럼만], [초등학교 커리큘럼, 중학교 커리큘럼]
-  - `isActive`: 활성화 여부
+  - `is_active`: 활성화 여부
   - `last_login`: 마지막 로그인 시간
   - `created_at`: 생성일
   - `updated_at`: 수정일
@@ -320,15 +339,13 @@ row2 { sessionId: 1000, problemId: 444, unitId: 4, sequence: 0, context: lesson,
   - `parent_id`: 부모 문제 ID (스텝문제인 경우 메인문제의 ID, 메인문제인 경우 null)
   - `problem_id`: 로시안 문제번호
   - `unit_id`: 로시안 유닛번호
+  - `elo_score`
+    > 문제가 가진 eloScore
+    > 
+    > 문제가 출제되면 문제의 eloScore를 저장한다
+    > 
+    > 엄밀히 말하면 문제에 eloScore가 아니고, 유닛밑에 문제가 할당되어 있고 유닛에 eloScore 라고 보는게 맞음
   - `sequence`: 문제의 순서, 1번째 문제
-  - `context`
-    > 문제를 어디에서 풀었는지 확인하는 컬럼
-    > 
-    > - 틀린문제 다시풀기
-    > 
-    > - 오답노트 스코어에서는 `problem_logs, problem_logs_retry, tag_note_logs, tag_note_retry` 로 분리되어 있음
-    > 
-    > 이 부분들을 각각 조회해서 서버에서 조립해주어야 하는 부분이 있었음
   - `is_step`: 스텝문제인지 확인하는 플래그
   - `status`
     > 문제의 상태
@@ -350,7 +367,17 @@ row2 { sessionId: 1000, problemId: 444, unitId: 4, sequence: 0, context: lesson,
     > 메인문제는 자신의 상태 + 스텝에서 문제푼 상태 를 모두 저장한다
     > 
     > 스텝문제에서는 자신의 상태만 기록한다(틀리고 맞음)
+  - `is_right`: 문제를 맞았는지 여부
   - `created_at`: 생성일
+
+### `problem_answers`
+
+**Properties**
+  - `id`: Primary Key
+  - `problem_set_id`: ProblemSet들을 저장한 id
+  - `answer`: 정답
+  - `user_id`: userId 도 저장한다면 검색에서 더 빠를수 있을것 같음, 실제로 ui 로 제공된다면 필요는 없을듯
+  - `try_count`: 문제풀이 시도횟수
 
 ### `media_content_keys`
 미디어 컨텐츠 키 정보를 저장하는 테이블
@@ -385,7 +412,7 @@ row2 { sessionId: 1000, problemId: 444, unitId: 4, sequence: 0, context: lesson,
   - `removed_at`: 삭제일
 
 ### `user_synapses`
-유저가 가지고 있는 지식을 표현하기 위한 테이블 elo 점수
+유저가 가지고 있는 지식�� 표현하기 위한 테이블 elo 점수
 
 1:1 로 구현이 되어있어 User 를 조회하면 모든 지식을 조회할 수 있음
 
@@ -424,8 +451,7 @@ LIMIT 1 로 최근걸 가져올수 있다
   - `id`: Primary Key
   - `user_id`: 유저의 ID
   - `knowledge_id`: 지식의 ID
-  - `previous_elo_score`: 이전 elo 점수
   - `elo_score`: elo 점수
-  - `elo_change`: 점수 변화량
+  - `lesson_session_id`: elo 점수에 영향을 끼친 세션의 ID
   - `change_reason`: 변화 이유
   - `created_at`: 생성일
